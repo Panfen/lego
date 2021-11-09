@@ -1,0 +1,64 @@
+.edit_layer #f50 {
+	position: absolute;
+	top: 0;
+	right: 0;
+	padding: 3px 10px; 
+	background-color: #999;
+	color: #fff;
+}
+
+#dragdiv {
+	width: 10px;
+	height: 10px;
+	background: #aaa;
+	position: absolute;
+	z-index: 100000; 
+}
+
+.side-panel {
+	width: 500px;
+	background: #eee;
+	overflow: auto;
+	position: fixed;
+	right: 0;
+	top: 0;
+	height: 100%;
+	&.left {
+		width: 400px;
+		left: 0;
+		top: 0;
+	}
+}
+
+.container.center {
+	flex: 1;
+	position: relative; 
+	margin: 0 500px 0 400px;
+	.edit-tip {
+		position: absolute;
+		top: 25px;
+		width: 100%;
+		text-align: center;
+		font-size: 20px; 
+		color: #aaa;
+	}
+}
+
+.four-value-form-item {
+	margin-bottom: 5px;
+	input {
+		width: 70px;
+		margin-right: 5px;
+		&:last-child {
+			margin-right: 0;
+		}
+	}
+}
+
+.edit-props-wrap {
+	min-height: 30px;
+	background: #fff;
+	.ant-btn {
+		margin-right: 20px;
+	}
+}

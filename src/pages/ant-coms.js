@@ -18,6 +18,9 @@ import Table from './coms/Table';
 import Table_Data from './coms/Table_Data';
 import InputNumber from './coms/InputNumber';
 import Switch from './coms/Switch';
+import Row2 from './coms/Row2';
+import Row4 from './coms/Row4';
+import Row8 from './coms/Row8';
 import Table_Column from './coms/Table.Column';
 import Modal from './coms/Modal';
 import div from './coms/div';
@@ -30,6 +33,14 @@ import RJSelect from './coms/RJSelect';
 var _ = require('lodash');
 
 export default [
+    {
+        "group_title": "栅格组件（横向百分比）",
+        "coms": [
+            Row2,
+            Row4,
+            Row8
+        ]
+    },
     {
         "group_title": "布局容器组件",
         "coms": [

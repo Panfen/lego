@@ -36,9 +36,8 @@ body {
   }
 
 .editor .draggable  {
-  border:1px dashed #409eff;
+  border:1px dashed #f7bebe;
 }
 .container >.draggable {
-  border: none;
-  height: calc(100vh - 50px) !important; 
+  height: 100vh !important; 
 }
