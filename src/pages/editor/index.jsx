@@ -1,16 +1,17 @@
-import React, { Component } from 'react';
-import antd from '../components/index';
-import antComponents from './ant-coms.js';
-import { Collapse, Modal, Form, Table, Button } from 'antd';
-const Panel = Collapse.Panel;
-import { Tag, Input, InputNumber, Alert, Select, Checkbox } from 'antd';
+import React, { Component, Fragment } from 'react';
+import { Collapse, Modal, Form, Table, Button, Tag, Input, InputNumber, Alert, Select, Checkbox } from 'antd';
 import _ from 'lodash';
 import NativeListener from 'react-native-listener';
 import ColorPicker from 'rc-color-picker';
+import com_div from '../../coms/div';
+import antd from '../../components/index';
+import antComponents from '../../coms/ant-coms';
+import { renderJSONtoJSX } from '../../utils';
+import 'rc-color-picker/assets/index.css';
+import './index.scss';
 
-import com_div from './coms/div';
+const Panel = Collapse.Panel;
 
-import 'rc-color-picker/assets/index.css'
 class Editor extends Component {
   constructor() {
     super();
@@ -22,14 +23,16 @@ class Editor extends Component {
       editCom: {},
       value4EditResult: {}, // 属性编辑器中4值编辑的临时存储
       comNowIndex: 1, // 用来给每个组件唯一编号
-      activeCom: {},
+      activeCom: {
+        props: {
+          style: {}
+        }
+      },
       editTarget: null,
       showAddList: false,
       hasBeginEdit: false,
       isDragLayer: false,
-      addListData: {
-
-      },
+      addListData: {},
       mouse_x: 0,
       mouse_y: 0,
       dragdiv_x: 0,
@@ -40,7 +43,6 @@ class Editor extends Component {
       layer_w: 0,
       layer_h: 0,
       layer_isTop: true,
-      indent_space: '',
       data: [
         (function () {
           var div = _.cloneDeep(com_div);
@@ -49,10 +51,10 @@ class Editor extends Component {
         })()
       ]
     };
-    var v = localStorage.getItem('cache_data');
-    if (v) {
-      this.state.data = JSON.parse(v);
-    }
+    // var v = localStorage.getItem('cache_data');
+    // if (v) {
+    //   this.state.data = JSON.parse(v);
+    // }
 
     setTimeout(() => {
       this.setState({
@@ -61,23 +63,22 @@ class Editor extends Component {
     }, 3000)
   }
 
-  _getComponent(types) {
+  _getComponent (types) {
     if (types.length == 1) {
-      return antd[types[0]]
+      return antd[types[0]];
     } else {
       var lastT = types.pop();
       var com = this._getComponent(types)[lastT];
       return com;
     }
   }
-  findCanDropTarget(target) {
-    if (target.className.indexOf('draggable') != -1) {
-      return target;
-    } else {
-      return this.findCanDropTarget(target.parentNode);
-    }
+
+  findCanDropTarget (target) {
+    return target.className.indexOf('draggable') != -1 ? target : this.findCanDropTarget(target.parentNode);
   }
-  renderJSON(json) {
+
+  renderJSON (json) {
+    const { draggingData } = this.state;
     return (
       json.map((d, i) => {
         d.id = this.state.comNowIndex++;
@@ -92,10 +93,8 @@ class Editor extends Component {
         }
 
         var props = {};
-        d.props = d.props || {};
-
+        
         if (d.can_place) {
-
           props.className = 'draggable';
           props.onDragOver = (e) => {
             e.preventDefault();
@@ -104,9 +103,8 @@ class Editor extends Component {
             e.preventDefault();
             e.stopPropagation();
             this.findCanDropTarget(e.target).className = this.findCanDropTarget(e.target).className.replace('isdroping', '')
-            var com = this.state.draggingData;
             d.childrens = d.childrens ? d.childrens : [];
-            d.childrens.push(_.cloneDeep(com));
+            d.childrens.push(_.cloneDeep(draggingData));
             this.forceUpdate();
           }
           props.onDragOver = (e) => {
@@ -114,7 +112,6 @@ class Editor extends Component {
             if (this.findCanDropTarget(e.target).className.indexOf('isdroping') == -1) {
               this.findCanDropTarget(e.target).className += (' isdroping')
             }
-
           }
           props.onDragLeave = (e) => {
             e.preventDefault();
@@ -131,9 +128,8 @@ class Editor extends Component {
         }
         outerProps.onMouseLeave = (e) => {
           e.stopPropagation();
-
           if (!this.state.isDragLayer) {
-            this.hideLayer();
+            this.setState({ layer_show: false });
           }
         }
         outerProps.onClick = (e) => {
@@ -143,6 +139,7 @@ class Editor extends Component {
           })
           this.forceUpdate();
         }
+        d.props = d.props || {};
         var realProps = Object.assign({}, d.props);
         for (var i in realProps) {
           if (typeof (realProps[i]) == 'object' && realProps[i].type == 'relative') {
@@ -150,7 +147,7 @@ class Editor extends Component {
           }
         }
         if (d.sub_type == 'table_container') {
-          realProps.columns.forEach((c) => {
+          realProps.columns.forEach(c => {
             if (c.childrens) {
               c.render = () => {
                 return this.renderJSON(c.childrens)
@@ -178,9 +175,9 @@ class Editor extends Component {
             {React.createElement(
               component,
               realProps,
-              [<div {...props} style={{ width: "100%", height: "100%", minHeight: 20, minWidth: 20 }}>{
-                d.props.content ? [d.props.content] : (d.childrens ? this.renderJSON(d.childrens) : null)
-              }</div>]
+              [<div {...props} style={{ width: "100%", height: "100%", minHeight: 20, minWidth: 20 }}>
+                {d.props.content ? [d.props.content] : (d.childrens ? this.renderJSON(d.childrens) : null)}
+              </div>]
             )}
           </NativeListener>
         } else if (d.wrap) {
@@ -206,19 +203,9 @@ class Editor extends Component {
       })
     )
   }
-  handleOk() {
-    this.setState({
-      modal_visible: false
-    })
-  }
-  handleCancel() {
-    this.setState({
-      modal_visible: false
-    })
-  }
 
   showLayer(target, d) {
-    var pos = this.getDOMPOS(target);
+    var pos = this.getDomPos(target);
     this.setState({
       activeCom: d,
       layer_x: pos.x,
@@ -230,19 +217,11 @@ class Editor extends Component {
       dragdiv_x: target.offsetWidth + pos.x,
       dragdiv_y: target.offsetHeight + pos.y
     })
-
     document.getElementById("dragdiv").style.left = (target.offsetWidth + pos.x - 10) + 'px'
     document.getElementById("dragdiv").style.top = (target.offsetHeight + pos.y - 10) + 'px'
-
   }
 
-  hideLayer() {
-    this.setState({
-      layer_show: false
-    })
-  }
-
-  getDOMPOS(target) {
+  getDomPos(target) {
     var actualLeft = target.offsetLeft;
     var current = target.offsetParent;
     while (current !== null) {
@@ -295,34 +274,31 @@ class Editor extends Component {
       }}>添加一项</Button>
       {
         this.state.showAddList ? <Form layout={"horizontal"} >
-          {
-            config.map((c) => {
-
-              return <Form.Item label={c.title} style={{ marginBottom: 5 }}>
-                {
-                  (() => {
-                    if (c.type == 'String')
-                      return <Input placeholder={c.title} onInput={(v) => {
-                        this.state.addListData[c.dataIndex] = v.target.value + "";
-                      }}></Input>
-                    if (c.type == 'Number')
-                      return <InputNumber onChange={(v) => {
-                        this.state.addListData[c.dataIndex] = v;
-                      }}></InputNumber>
-                    if (c.type == 'Boolean')
-                      return <Checkbox onChange={(v) => {
-                        this.state.addListData[c.dataIndex] = v;
-                      }}></Checkbox>
-                    else
-                      return <Input placeholder={c.title} onInput={(v) => {
-                        this.state.addListData[c.dataIndex] = v.target.value + "";
-                      }}></Input>
-                  })()
-                }
-              </Form.Item>
-            })
-          }
-          <Form.Item label="" style={{ marginBottom: 5 }}>
+          {config.map(c => {
+            return <Form.Item label={c.title} className="mb5">
+              {
+                (() => {
+                  if (c.type == 'String')
+                    return <Input placeholder={c.title} onInput={v => {
+                      this.state.addListData[c.dataIndex] = v.target.value + "";
+                    }}></Input>
+                  if (c.type == 'Number')
+                    return <InputNumber onChange={v => {
+                      this.state.addListData[c.dataIndex] = v;
+                    }}></InputNumber>
+                  if (c.type == 'Boolean')
+                    return <Checkbox onChange={v => {
+                      this.state.addListData[c.dataIndex] = v;
+                    }}></Checkbox>
+                  else
+                    return <Input placeholder={c.title} onInput={v => {
+                      this.state.addListData[c.dataIndex] = v.target.value + "";
+                    }}></Input>
+                })()
+              }
+            </Form.Item>
+          })}
+          <Form.Item label="" className="mb5">
             <Button type="primary" onClick={() => {
               this.setState({
                 showAddList: false
@@ -366,7 +342,6 @@ class Editor extends Component {
         </Form> : null
       }
     </div>
-
   }
 
   findIdFromComs(id, coms, parent) {
@@ -385,6 +360,7 @@ class Editor extends Component {
     }
     return result;
   }
+
   copyCom(com) {
     var id = com.id;
     var { com, parent } = this.findIdFromComs(id, this.state.data);
@@ -394,12 +370,28 @@ class Editor extends Component {
     this.forceUpdate();
   }
 
+  /**
+   * 修改样式的上、右、下、左
+   */ 
+  update4Value = (s, index, v) => {
+    const { value4EditResult, editCom } = this.state;
+    const values = value4EditResult[s];
+    values[index] = v.target.value;
+    const newEditCom = _.cloneDeep(editCom);
+    newEditCom.props.style[s] = values.join(' ');
+    this.setState({
+      editCom: newEditCom
+    }, () => {
+      this.forceUpdate();
+    });                         
+  }
+
   render() {
-    this.state.dependComponents = [];
-    localStorage.setItem('cache_data', JSON.stringify(this.state.data));
+    const { dependComponents, data, hasBeginEdit, value4EditResult, editCom, activeCom, isDragLayer } = this.state;
+    // localStorage.setItem('cache_data', JSON.stringify(this.state.data));
     return (
       <div style={{ display: "flex" }} className={'editor'} onMouseMove={(e) => {
-        if (this.state.isDragLayer) {
+        if (isDragLayer) {
           e.stopPropagation();
           this.state.mouse_x = e.clientX;
           this.state.mouse_y = e.clientY;
@@ -408,156 +400,145 @@ class Editor extends Component {
           this.state.dragdiv_y = this.state.mouse_y
           document.getElementById("dragdiv").style.left = this.state.mouse_x - 5 + 'px'
           document.getElementById("dragdiv").style.top = this.state.mouse_y - 5 + 'px'
-          if (!this.state.activeCom.props.style) {
-            this.state.activeCom.props.style = {}
-          }
-          this.state.layer_w = this.state.activeCom.props.style.width = this.state.mouse_x + 5 - this.state.layer_x;
-          this.state.layer_h = this.state.activeCom.props.style.height = this.state.mouse_y + 5 - this.state.layer_y;
+          this.state.layer_w = activeCom.props.style.width = this.state.mouse_x + 5 - this.state.layer_x;
+          this.state.layer_h = activeCom.props.style.height = this.state.mouse_y + 5 - this.state.layer_y;
           this.forceUpdate()
         }
       }} onMouseUp={() => {
-        this.state.isDragLayer = false;
+        this.setState({ isDragLayer: false });
       }}>
         <div className="edit_layer" style={{ zIndex: (this.state.layer_isTop ? 1000 : -10), display: (this.state.layer_show ? "block" : "none"), width: this.state.layer_w, height: this.state.layer_h, left: this.state.layer_x, top: this.state.layer_y }}>
-          <div color="#f50" style={{ position: 'absolute', top: 0, right: 0, padding: "3px 10px", backgroundColor: "#999", color: "#fff" }}>{this.state.activeCom.title}</div>
-
-
+          <div color="#f50">{activeCom.title}</div>
         </div>
-        <NativeListener onMouseDown={(e) => {
+        <NativeListener onMouseDown={e => {
           e.stopPropagation();
-          this.state.isDragLayer = true;
+          this.setState({ isDragLayer: true });
         }}>
-          <div id="dragdiv" style={{ width: 10, height: 10, background: "#aaa", position: "absolute", zIndex: 100000 }}></div>
+          <div id="dragdiv"></div>
         </NativeListener>
-        <div className="container" style={{ flex: 1, position: 'relative', marginRight: 500 }}>
-          {
-            (!this.state.hasBeginEdit) ? <div style={{ position: 'absolute', top: 25, width: '100%', textAlign: 'center', fontSize: 20, color: "#aaa" }}>
-              设计板，拖拽元素到此，点击元素可以编辑属性，红色虚线区域可以放置子组件
-            </div> : null
-          }
-          {
-            this.renderJSON(this.state.data)
-          }
+
+        {/* 左侧组件选择区*/}
+        <div className="side-panel left">
+          <Collapse>
+            {antComponents.map((group, i) => {
+              return <Panel header={`${group.group_title} (${group.coms.length})`} key={i + 1}>
+                {group.coms.map((com, i2) => {
+                  return <Tag onDragStart={(ev) => {
+                    this.setState({
+                      hasBeginEdit: true
+                    })
+                    this.state.draggingData = com;
+                  }} draggable={true} key={i + '' + i2}>{com.type} {com.title}</Tag>
+                })}
+              </Panel>
+            })}
+          </Collapse>
         </div>
-        <div style={{ width: 500, background: '#eee', overflow: "auto", position: 'fixed', right: 0, top: 0, height: window.innerHeight }}>
+
+        {/* 中间页面展示区 */}
+        <div className="container center">
+          {console.log(data)}
+          {!hasBeginEdit && <div className="edit-tip">设计板，拖拽元素到此，点击元素可以编辑属性，红色虚线区域可以放置子组件</div>}
+          {this.renderJSON(data)}
+        </div>
+
+        {/* 右侧属性编辑区 */}
+        <div className="side-panel right">
           <Collapse defaultActiveKey={['0', 'output']} onChange={() => { }}>
             <Panel header={'属性编辑区 ' + (this.state.editCom.title ? `（${this.state.editCom.title}）` : '')} key={0}>
               <div style={{ minHeight: "30px", background: "#fff" }}>
-
-                {
-                  this.state.editCom.type ? <Button onClick={() => {
+                {editCom.type && <Button onClick={() => {
                     this.state.editCom.hasDelete = true;
                     this.forceUpdate();
-                  }} style={{ marginRight: 20 }}>删除此元素</Button> : null
+                  }} style={{ marginRight: 20 }}>删除此元素</Button>
                 }
-                {
-                  this.state.editCom.type ? <Button onClick={() => {
+                {editCom.type && <Button onClick={() => {
                     this.copyCom(this.state.editCom);
                     this.forceUpdate();
-                  }} style={{ marginRight: 20 }}>复制此元素</Button> : null
+                  }} style={{ marginRight: 20 }}>复制此元素</Button>
                 }
                 <Button onClick={() => {
-                  localStorage.setItem('cache_data', '');
+                  // localStorage.setItem('cache_data', '');
                   window.location.reload();
                 }} style={{ marginRight: 20 }}>清空并重新开始</Button>
                 {
-                  (this.state.editCom && this.state.editCom.config) ? Object.keys(this.state.editCom.config).map((key) => {
+                  (editCom && editCom.config) ? Object.keys(editCom.config).map(key => {
                     if (key == 'style') {
                       var style = this.state.editCom.config.style;
 
-                      return Object.keys(this.state.editCom.config.style).map((s) => {
+                      return Object.keys(style).map((s) => {
                         if (style[s].type == 'color') {
-                          console.log(this.state.editCom.props.style[s])
-                          return <Form.Item label={this.state.editCom.config[key][s].text} style={{ marginBottom: 5 }}>
+                          return <Form.Item label={editCom.config[key][s].text} className="mb5">
                             <ColorPicker
-                              color={this.state.editCom.props.style[s] || '#fff'}
-                              onChange={(c) => {
-                                this.state.editCom.props.style[s] = c.color;
-                                this.forceUpdate();
-                              }}
                               placement="topRight"
+                              color={editCom.props.style[s] || '#fff'}
+                              onChange={c => {
+                                const newEditCom = _.cloneDeep(editCom);
+                                newEditCom.props.style[s] = c.color;
+                                this.setState({ editCom: newEditCom }, () => {
+                                  this.forceUpdate();
+                                });
+                              }}
                             />
                           </Form.Item>
                         } else if (style[s].type == '4-value') {
-                          var defaultValue = this.state.editCom.props.style[s] || "0";
+                          var defaultValue = editCom.props.style[s] || "0";
                           if (defaultValue.toString().indexOf(' ') == -1) {
                             this.state.value4EditResult[s] = [defaultValue, defaultValue, defaultValue, defaultValue];
                           } else {
                             this.state.value4EditResult[s] = defaultValue.split(' ')
                           }
-                          return <Form.Item label={this.state.editCom.config.style[s].text} style={{ marginBottom: 5 }}>
-                            上：<Input defaultValue={this.state.value4EditResult[s][0]} onChange={(v) => {
-                              this.state.value4EditResult[s][0] = v.target.value;
-                              this.state.editCom.props.style[s] = this.state.value4EditResult[s].join(" ")
-                              this.forceUpdate()
-                            }} style={{ width: 50, marginRight: 5 }}></Input>
-                            右：<Input defaultValue={this.state.value4EditResult[s][1]} onChange={(v) => {
-                              this.state.value4EditResult[s][1] = v.target.value;
-                              this.state.editCom.props.style[s] = this.state.value4EditResult[s].join(" ")
-                              this.forceUpdate()
-                            }} style={{ width: 50, marginRight: 5 }}></Input>
-                            下：<Input defaultValue={this.state.value4EditResult[s][2]} onChange={(v) => {
-                              this.state.value4EditResult[s][2] = v.target.value;
-                              this.state.editCom.props.style[s] = this.state.value4EditResult[s].join(" ")
-                              this.forceUpdate()
-                            }} style={{ width: 50, marginRight: 5 }}></Input>
-                            左：<Input defaultValue={this.state.value4EditResult[s][3]} onChange={(v) => {
-                              this.state.value4EditResult[s][3] = v.target.value;
-                              this.state.editCom.props.style[s] = this.state.value4EditResult[s].join(" ")
-                              this.forceUpdate()
-                            }} style={{ width: 50 }}></Input>
+                          return <Form.Item label={editCom.config.style[s].text} className="four-value-form-item">
+                            {['上', '右', '下', '左'].map((pos, index) => {
+                              return <Fragment key={index}>
+                                {pos}：<Input defaultValue={value4EditResult[s][index]} onChange={v => this.update4Value(s, index, v)} />
+                              </Fragment>
+                            })}
                           </Form.Item>
                         } else {
-                          return <Form.Item label={this.state.editCom.config[key][s].text} style={{ marginBottom: 5 }}>
-                            <Input defaultValue={this.state.editCom.props[key][s]} onChange={(v) => {
+                          return <Form.Item label={editCom.config[key][s].text} className="mb5">
+                            <Input defaultValue={editCom.props[key][s]} onChange={(v) => {
                               this.state.editCom.props[key][s] = v.target.value;
                               this.forceUpdate()
                             }}></Input>
                           </Form.Item>
                         }
                       })
-                    } else if (this.state.editCom.config[key].enumobject) {
-                      return this.renderEnumObject(this.state.editCom, key);
+                    } else if (editCom.config[key].enumobject) {
+                      return this.renderEnumObject(editCom, key);
                     } else {
-                      return <Form.Item label={this.state.editCom.config[key].text} style={{ marginBottom: 5 }}>
+                      return <Form.Item label={editCom.config[key].text} className="mb5">
                         {
                           (() => {
-                            if (this.state.editCom.config[key].enum) {
+                            if (editCom.config[key].enum) {
                               return <Select
-                                defaultValue={this.state.editCom.props[key]}
-                                style={{ width: 120 }}
-                                onChange={(v) => {
-                                  this.state.editCom.props[key] = (v == "true" ? true : (v === "false" ? false : v));
+                                defaultValue={editCom.props[key]}
+                                onChange={v => {
+                                  this.state.editCom.props[key] = (v == 'true' ? true : (v === 'false' ? false : v));
                                   this.forceUpdate();
                                 }}>
-                                {
-                                  this.state.editCom.config[key].enum.map((n) => {
-                                    return <Select.Option value={n}>{n}</Select.Option>
-                                  })
-                                }
+                                {editCom.config[key].enum.map(n => <Select.Option value={n}>{n}</Select.Option>)}
                               </Select>
-                            } else if (this.state.editCom.config[key].type == "Boolean") {
+                            } else if (editCom.config[key].type == "Boolean") {
                               return <Checkbox
-                                checked={this.state.editCom.props[key]}
-                                onChange={(v) => {
+                                checked={editCom.props[key]}
+                                onChange={v => {
                                   this.state.editCom.props[key] = v.target.checked;
                                   this.forceUpdate();
                                 }} />
-
                             } else if (key == 'content') {
-                              return <Input defaultValue={this.state.editCom.props[key]} onChange={(v) => {
+                              return <Input defaultValue={editCom.props[key]} onChange={v => {
                                 this.state.editCom.props[key] = v.target.value;
                                 this.forceUpdate()
-                              }}></Input>
+                              }} />
                             } else {
-                              return <Input defaultValue={this.state.editCom.props[key]} onChange={(v) => {
+                              return <Input defaultValue={editCom.props[key]} onChange={v => {
                                 this.state.editCom.props[key] = v.target.value;
                                 this.forceUpdate()
-                              }}></Input>
+                              }} />
                             }
                           })()
                         }
-
                       </Form.Item>
                     }
                   }) : (
@@ -566,124 +547,19 @@ class Editor extends Component {
                 }
               </div>
             </Panel>
-
-            {
-              antComponents.map((group, i) => {
-                return <Panel header={group.group_title + ' ' + group.coms.length} key={i + 1}>
-                  {
-                    group.coms.map((com, i2) => {
-                      return <Tag onDragStart={(ev) => {
-                        this.setState({
-                          hasBeginEdit: true
-                        })
-                        this.state.draggingData = com;
-                      }} draggable={true} key={i + '' + i2}>{com.type} {com.title}</Tag>
-                    })
-                  }
-                </Panel>
-              })
-            }
+            
             <Panel header={'最终代码（自动更新）'} key={'output'}>
               <Button style={{ marginBottom: 5 }} onClick={() => {
-                localStorage.setItem('preview_data', JSON.stringify(this.state.data));
+                localStorage.setItem('preview_data', JSON.stringify(data));
                 window.open('#/preview')
               }} type={'primary'}>生成预览页面</Button>
-              <Input type="textarea" rows={10} value={this.renderJSONtoJSX()}></Input>
+              <Input type="textarea" rows={10} value={renderJSONtoJSX(dependComponents, data)}></Input>
             </Panel>
           </Collapse>
-
         </div>
-
       </div>
     );
   }
-
-  collectCom(data) {
-
-  }
-
-  renderJSONtoJSX() {
-    this.state.indent_space = ''
-
-    return `import React, { Component } from 'react';
-
-  /*
-  * 这里声明要引入的组件
-  */
-  import { ${_.uniq(this.state.dependComponents).join(', ')} } from '../components/index.jsx';
-
-  /**
-  * Index 一般是当前页面名称 index.html
-  */
-  class Index extends Component {
-    constructor () {
-      super();
-    }
-    render(){
-      return ${this.renderElementtoJSX(this.state.data).replace(/\n    /, '')}
-    }
-  }
-  export default Index;
-
-  `
-  }
-
-  renderElementtoJSX(data) {
-    var result = '';
-    this.state.indent_space += "    ";
-    data.forEach((d) => {
-      if (d.hasDelete) return;
-      console.log(d)
-      console.log(d.props)
-      result += `
-    ${this.state.indent_space}<${d.type}${this.renderProps(d.props, d)}>${d.props.content ? [d.props.content] : (d.childrens ? this.renderElementtoJSX(d.childrens) : '')}</${d.type}>
-    `
-    })
-    this.state.indent_space = this.state.indent_space.replace('    ', '');
-    result += `${this.state.indent_space}`;
-    return result;
-  }
-
-  renderProps(props, d) {
-    var result = '';
-    var props = _.cloneDeep(props);
-    for (var i in props) {
-      if (!(/^on[A-Z]/.test(i) || /draggable/.test(i) || /content/.test(i))) {
-        if (/^event_(.*?)/.test(i)) {
-          result += ` ${i.replace('event_', '')}={()=>{ }}`
-        } else if (typeof (props[i]) == 'object' && props[i].type == 'relative') {
-          result += ` ${i}={${JSON.stringify(props[props[i].target] ? props[i].true : props[i].false)}}`
-        } else if (d.sub_type == "table_container" && i == 'columns') {
-          var renderCache = {
-
-          }
-          props[i].forEach((p, pi) => {
-            if (p.childrens) {
-              var indentCache = this.state.indent_space;
-              this.state.indent_space = '';
-
-              renderCache['$$' + pi + '$$'] = `()=>{ return ${this.renderElementtoJSX(p.childrens).replace(/\n    /, '')}}`
-              this.state.indent_space = indentCache
-              p.render = '$$' + pi + '$$'
-              delete p.childrens;
-            }
-          })
-          var noindent = JSON.stringify(props[i])
-          var indent = JSON.stringify(props[i], null, 2);
-          var r = noindent.length > 100 ? indent : noindent;
-          for (var m in renderCache) {
-            r = r.replace(`"${m}"`, renderCache[m])
-          }
-          result += ` ${i}={${r}}`
-        } else {
-          var noindent = JSON.stringify(props[i])
-          var indent = JSON.stringify(props[i], null, 2);
-          result += ` ${i}={${noindent.length > 100 ? indent : noindent}}`
-        }
-
-      }
-    }
-    return result;
-  }
+  
 }
 export default Editor;

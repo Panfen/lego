@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import antd from '../components/index'
-import Editor from './editor';
+import antd from '../../components/index'
+import Editor from '../editor';
 
 class Preview extends Editor {
   constructor() {

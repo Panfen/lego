@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
-import './App.css';
+// import './App.css';
 
-import Editor from '../pages/editor.jsx';
-import preview from '../pages/preview.jsx';
+import Editor from '../pages/editor';
+import preview from '../pages/preview';
 import {
   Switch,
   BrowserRouter as Router,
