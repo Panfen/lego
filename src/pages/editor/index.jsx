@@ -78,7 +78,7 @@ class Editor extends Component {
   }
 
   renderJSON (json) {
-    const { draggingData } = this.state;
+    const { draggingData, comNowIndex, isDragLayer } = this.state;
     return (
       json.map((d, i) => {
         d.id = this.state.comNowIndex++;
@@ -122,13 +122,13 @@ class Editor extends Component {
         outerProps.onMouseOver = (e) => {
           e.stopPropagation();
           e.preventDefault()
-          if (!this.state.isDragLayer) {
+          if (!isDragLayer) {
             this.showLayer(e.target, d);
           }
         }
         outerProps.onMouseLeave = (e) => {
           e.stopPropagation();
-          if (!this.state.isDragLayer) {
+          if (!isDragLayer) {
             this.setState({ layer_show: false });
           }
         }
@@ -205,20 +205,20 @@ class Editor extends Component {
   }
 
   showLayer(target, d) {
-    var pos = this.getDomPos(target);
+    const { x, y } = this.getDomPos(target);
     this.setState({
       activeCom: d,
-      layer_x: pos.x,
-      layer_y: pos.y,
+      layer_x: x,
+      layer_y: y,
       layer_w: target.offsetWidth,
       layer_h: target.offsetHeight,
       layer_show: true,
       layer_isTop: true,
-      dragdiv_x: target.offsetWidth + pos.x,
-      dragdiv_y: target.offsetHeight + pos.y
-    })
-    document.getElementById("dragdiv").style.left = (target.offsetWidth + pos.x - 10) + 'px'
-    document.getElementById("dragdiv").style.top = (target.offsetHeight + pos.y - 10) + 'px'
+      dragdiv_x: target.offsetWidth + x,
+      dragdiv_y: target.offsetHeight + y
+    });
+    document.getElementById("dragdiv").style.left = (target.offsetWidth + x - 10) + 'px';
+    document.getElementById("dragdiv").style.top = (target.offsetHeight + y - 10) + 'px';
   }
 
   getDomPos(target) {
@@ -241,17 +241,18 @@ class Editor extends Component {
   }
 
   renderEnumObject(editcom, key) {
+    const { showAddList } = this.state;
     var props = editcom.props[key];
     var config = editcom.config[key].enumobject;
     if (config.type == 'relative_props_object') {
       config = editcom.props[config.target];
     }
     return <div>
-      <div style={{ marginTop: 10, marginBottom: 10, fontWeight: 'bold', fontSize: 20 }}>{editcom.config[key].text}</div>
+      <div className="enum-title">{editcom.config[key].text}</div>
       <Table
         pagination={false}
         bordered={true}
-        size={"small"}
+        size="small"
         columns={config.concat([{
           key: 'xx',
           dataIndex: "xx",
@@ -273,7 +274,7 @@ class Editor extends Component {
         })
       }}>添加一项</Button>
       {
-        this.state.showAddList ? <Form layout={"horizontal"} >
+        showAddList && <Form layout="horizontal" >
           {config.map(c => {
             return <Form.Item label={c.title} className="mb5">
               {
@@ -302,8 +303,7 @@ class Editor extends Component {
             <Button type="primary" onClick={() => {
               this.setState({
                 showAddList: false
-              })
-
+              });
               if (editcom.sub_type == 'table_container') {
                 this.state.addListData.childrens = [{
                   type: "div",
@@ -331,15 +331,13 @@ class Editor extends Component {
                   }
                 }]
               }
-
               props.push(this.state.addListData);
-
               editcom.props[key] = _.cloneDeep(props);
               this.state.addListData = {}
               this.forceUpdate();
             }}>提交</Button>
           </Form.Item>
-        </Form> : null
+        </Form>
       }
     </div>
   }
@@ -353,7 +351,6 @@ class Editor extends Component {
           com: com,
           parent: parent
         }
-        break;
       } else if (com.childrens) {
         result = this.findIdFromComs(id, com.childrens, com);
       }
@@ -361,11 +358,12 @@ class Editor extends Component {
     return result;
   }
 
-  copyCom(com) {
+  copyCom (com) {
+    const { data, comNowIndex } = this.state;
     var id = com.id;
-    var { com, parent } = this.findIdFromComs(id, this.state.data);
+    var { com, parent } = this.findIdFromComs(id, data);
     var cloneCom = _.cloneDeep(com);
-    cloneCom.id = this.state.comNowIndex++;
+    cloneCom.id = comNowIndex++;
     parent.childrens.push(cloneCom)
     this.forceUpdate();
   }
@@ -374,7 +372,8 @@ class Editor extends Component {
    * 修改样式的上、右、下、左
    */ 
   update4Value = (s, index, v) => {
-    const { value4EditResult, editCom } = this.state;
+    const { value4EditResult, editCom, comNowIndex, activeCom } = this.state;
+    console.log(comNowIndex, activeCom)
     const values = value4EditResult[s];
     values[index] = v.target.value;
     const newEditCom = _.cloneDeep(editCom);
@@ -387,10 +386,21 @@ class Editor extends Component {
   }
 
   render() {
-    const { dependComponents, data, hasBeginEdit, value4EditResult, editCom, activeCom, isDragLayer } = this.state;
+    const { dependComponents, data, hasBeginEdit, value4EditResult, editCom, activeCom, isDragLayer, layer_isTop, layer_show,
+    layer_w, layer_h, layer_x, layer_y } = this.state;
     // localStorage.setItem('cache_data', JSON.stringify(this.state.data));
+      
+    const layerStyle = {
+      zIndex: layer_isTop ? 1000 : -10,
+      display: layer_show ? 'block' : 'none',
+      width: layer_w,
+      height: layer_h,
+      left: layer_x, 
+      top: layer_y
+    }
+
     return (
-      <div style={{ display: "flex" }} className={'editor'} onMouseMove={(e) => {
+      <div className="editor" onMouseMove={e => {
         if (isDragLayer) {
           e.stopPropagation();
           this.state.mouse_x = e.clientX;
@@ -407,7 +417,7 @@ class Editor extends Component {
       }} onMouseUp={() => {
         this.setState({ isDragLayer: false });
       }}>
-        <div className="edit_layer" style={{ zIndex: (this.state.layer_isTop ? 1000 : -10), display: (this.state.layer_show ? "block" : "none"), width: this.state.layer_w, height: this.state.layer_h, left: this.state.layer_x, top: this.state.layer_y }}>
+        <div className="edit_layer" style={layerStyle}>
           <div color="#f50">{activeCom.title}</div>
         </div>
         <NativeListener onMouseDown={e => {
@@ -423,12 +433,16 @@ class Editor extends Component {
             {antComponents.map((group, i) => {
               return <Panel header={`${group.group_title} (${group.coms.length})`} key={i + 1}>
                 {group.coms.map((com, i2) => {
-                  return <Tag onDragStart={(ev) => {
-                    this.setState({
-                      hasBeginEdit: true
-                    })
-                    this.state.draggingData = com;
-                  }} draggable={true} key={i + '' + i2}>{com.type} {com.title}</Tag>
+                  return <Tag
+                    key={i + '' + i2}
+                    draggable={true}
+                    onDragStart={() => {
+                      this.setState({ hasBeginEdit: true });
+                      this.state.draggingData = com;
+                    }}
+                  >
+                    {com.type} {com.title}
+                  </Tag>
                 })}
               </Panel>
             })}
@@ -437,34 +451,33 @@ class Editor extends Component {
 
         {/* 中间页面展示区 */}
         <div className="container center">
-          {console.log(data)}
           {!hasBeginEdit && <div className="edit-tip">设计板，拖拽元素到此，点击元素可以编辑属性，红色虚线区域可以放置子组件</div>}
           {this.renderJSON(data)}
         </div>
 
         {/* 右侧属性编辑区 */}
         <div className="side-panel right">
-          <Collapse defaultActiveKey={['0', 'output']} onChange={() => { }}>
-            <Panel header={'属性编辑区 ' + (this.state.editCom.title ? `（${this.state.editCom.title}）` : '')} key={0}>
-              <div style={{ minHeight: "30px", background: "#fff" }}>
+          <Collapse defaultActiveKey={['0', 'output']}>
+            <Panel header={'属性编辑区 ' + (editCom.title ? `（${editCom.title}）` : '')} key={0}>
+              <div className="edit-props-wrap">
                 {editCom.type && <Button onClick={() => {
                     this.state.editCom.hasDelete = true;
                     this.forceUpdate();
-                  }} style={{ marginRight: 20 }}>删除此元素</Button>
+                  }}>删除此元素</Button>
                 }
                 {editCom.type && <Button onClick={() => {
-                    this.copyCom(this.state.editCom);
+                    this.copyCom(editCom);
                     this.forceUpdate();
-                  }} style={{ marginRight: 20 }}>复制此元素</Button>
+                  }}>复制此元素</Button>
                 }
                 <Button onClick={() => {
                   // localStorage.setItem('cache_data', '');
                   window.location.reload();
-                }} style={{ marginRight: 20 }}>清空并重新开始</Button>
+                }}>清空并重新开始</Button>
                 {
                   (editCom && editCom.config) ? Object.keys(editCom.config).map(key => {
                     if (key == 'style') {
-                      var style = this.state.editCom.config.style;
+                      var style = editCom.config.style;
 
                       return Object.keys(style).map((s) => {
                         if (style[s].type == 'color') {
@@ -542,17 +555,17 @@ class Editor extends Component {
                       </Form.Item>
                     }
                   }) : (
-                    <Alert message="此组件无可编辑属性" type="warning" style={{ marginTop: 20 }}></Alert>
+                    <Alert message="此组件无可编辑属性" type="warning" className="mt20"></Alert>
                   )
                 }
               </div>
             </Panel>
             
-            <Panel header={'最终代码（自动更新）'} key={'output'}>
-              <Button style={{ marginBottom: 5 }} onClick={() => {
+            <Panel header="最终代码 (自动更新)" key="output">
+              <Button className="mb5" onClick={() => {
                 localStorage.setItem('preview_data', JSON.stringify(data));
                 window.open('#/preview')
-              }} type={'primary'}>生成预览页面</Button>
+              }} type="primary">生成预览页面</Button>
               <Input type="textarea" rows={10} value={renderJSONtoJSX(dependComponents, data)}></Input>
             </Panel>
           </Collapse>

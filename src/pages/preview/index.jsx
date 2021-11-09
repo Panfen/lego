@@ -6,27 +6,28 @@ class Preview extends Editor {
   constructor() {
     super();
     this.state = {
-        dependComponents:[],
-        comNowIndex:0,
-        indent_space:'',
-        data:[{
-          type:'Layout',
-          title:'布局块',
-          can_place:true,
-          props:{
-            style:{
-              paddingBottom:'100px',
-              background:"#fff"
-            }
-          },
-        }]
+      dependComponents:[],
+      comNowIndex:0,
+      indent_space:'',
+      data:[{
+        type:'Layout',
+        title:'布局块',
+        can_place:true,
+        props:{
+          style:{
+            paddingBottom:'100px',
+            background:"#fff"
+          }
+        },
+      }]
     }
-    var previewData = localStorage.getItem('preview_data')
-    this.state.data = JSON.parse(previewData)
-    setTimeout(()=>{
-        this.forceUpdate();
+    var previewData = localStorage.getItem('preview_data');
+    this.state.data = JSON.parse(previewData);
+    setTimeout(() => {
+      this.forceUpdate();
     },100)
   }
+
   render() {
     return  (<div class="preview">
       <div style={{marginRight:400}}>
