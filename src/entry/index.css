@@ -5,11 +5,11 @@ body {
   overflow: visible !important;
 }
 
-.editor .ant-tag{
+.editor .ant-tag {
   margin-bottom:8px;
 }
 
-.editor .edit_layer,.ant-modal  .edit_layer{
+.editor .edit_layer, .ant-modal .edit_layer{
   opacity: 0.5;
   background: #eee;
   border:1px dashed #999;
@@ -17,36 +17,49 @@ body {
   position:absolute;
   z-index: 10000000;
 }
-.editor div[class^="ant-col-"],.editor .ant-layout{
-  border:1px dashed #ccc;
-}
-.editor .isdroping,.ant-modal .isdroping{
-  border:1px solid #ff0000 !important;
-}
-.ant-modal-wrap {
-    position: relative !important;
-     overflow: visible !important;
-     margin-right:500px  !important;
-  }
-.ant-modal{
-    top:20px !important;
-  }
-.ant-modal-mask{
-    display: none !important;
-  }
 
-.editor .draggable  {
-  border:1px dashed #f7bebe;
+.editor div[class^="ant-col-"], .editor .ant-layout {
+  border: 1px dashed #ccc;
 }
+
+.editor .isdroping, .ant-modal .isdroping {
+  border: 1px solid #ff0000 !important;
+}
+/*.ant-modal-wrap {
+  position: relative !important;
+  overflow: visible !important;
+  margin-right:500px  !important;
+}
+
+.ant-modal{
+  top:20px !important;
+}
+
+.ant-modal-mask {
+  display: none !important;
+}*/
+
+.editor .draggable {
+  border: 1px dashed #f7bebe;
+}
+
 .container >.draggable {
   height: 100vh !important; 
 }
-
 
 .mb5 {
   margin-bottom: 5px;
 }
 
+.mt10 {
+  margin-top: 10px !important;
+}
+
 .mt20 {
   margin-top: 20px;
+}
+
+.btn-center {
+  display: block;
+  margin:  0 auto;
 }

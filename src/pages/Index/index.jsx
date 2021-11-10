@@ -1,12 +1,17 @@
 import React, { Component, Fragment } from 'react';
-import { Collapse, Modal, Form, Table, Button, Tag, Input, InputNumber, Alert, Select, Checkbox } from 'antd';
+import { Collapse, Modal, Form, Table, Button, Tag, Input, InputNumber, Alert, Select, Checkbox, message } from 'antd';
+import { CopyOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
 import _ from 'lodash';
 import NativeListener from 'react-native-listener';
 import ColorPicker from 'rc-color-picker';
+import copy from 'copy-to-clipboard';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import com_div from '../../coms/div';
 import antd from '../../components/index';
 import antComponents from '../../coms/ant-coms';
-import { renderJSONtoJSX } from '../../utils';
+import PreviewModal from './components/PreviewModal'
+import { renderJSONtoJSX, getComponent } from '../../utils';
 import 'rc-color-picker/assets/index.css';
 import './index.scss';
 
@@ -49,7 +54,8 @@ class Editor extends Component {
           div.props.style.height = 200;
           return div;
         })()
-      ]
+      ],
+      previewVisible: false, // 预览modal
     };
     // var v = localStorage.getItem('cache_data');
     // if (v) {
@@ -63,37 +69,26 @@ class Editor extends Component {
     }, 3000)
   }
 
-  _getComponent (types) {
-    if (types.length == 1) {
-      return antd[types[0]];
-    } else {
-      var lastT = types.pop();
-      var com = this._getComponent(types)[lastT];
-      return com;
-    }
-  }
-
   findCanDropTarget (target) {
     return target.className.indexOf('draggable') != -1 ? target : this.findCanDropTarget(target.parentNode);
   }
 
   renderJSON (json) {
-    const { draggingData, comNowIndex, isDragLayer } = this.state;
+    const { draggingData, comNowIndex, isDragLayer, editCom } = this.state;
     return (
       json.map((d, i) => {
-        d.id = this.state.comNowIndex++;
+        d.id = d.id || this.state.comNowIndex++;
         if (d.hasDelete) return;
 
         var component;
         if (d.is_native) {
           component = d.type;
         } else {
-          component = this._getComponent(d.type.split('.'));
+          component = getComponent(d.type.split('.'));
           this.state.dependComponents.push(d.type.split('.')[0]);
         }
 
         var props = {};
-        
         if (d.can_place) {
           props.className = 'draggable';
           props.onDragOver = (e) => {
@@ -118,6 +113,7 @@ class Editor extends Component {
             this.findCanDropTarget(e.target).className = this.findCanDropTarget(e.target).className.replace('isdroping', '')
           }
         }
+
         var outerProps = {};
         outerProps.onMouseOver = (e) => {
           e.stopPropagation();
@@ -134,9 +130,7 @@ class Editor extends Component {
         }
         outerProps.onClick = (e) => {
           e.stopPropagation();
-          this.setState({
-            editCom: d
-          })
+          this.setState({ editCom: d });
           this.forceUpdate();
         }
         d.props = d.props || {};
@@ -170,6 +164,7 @@ class Editor extends Component {
             }
           })
         }
+
         if (d.wrap_inner) {
           return <NativeListener {...outerProps}>
             {React.createElement(
@@ -258,16 +253,16 @@ class Editor extends Component {
           dataIndex: "xx",
           title: "操作",
           render: (text, record, index) => {
-            return <a onClick={() => {
-              props.splice(index, 1)
+            return <DeleteOutlined onClick={() => {
+              props.splice(index, 1);
               editcom.props[key] = _.cloneDeep(props);
               this.forceUpdate();
-            }}>Delete</a>
+            }} />
           }
         }])}
         dataSource={props}
       />
-      <Button icon="plus" style={{ marginTop: 10 }} onClick={() => {
+      <Button className="mt10" onClick={() => {
         this.state.addListData = {}
         this.setState({
           showAddList: true
@@ -305,31 +300,7 @@ class Editor extends Component {
                 showAddList: false
               });
               if (editcom.sub_type == 'table_container') {
-                this.state.addListData.childrens = [{
-                  type: "div",
-                  title: "通用布局块",
-                  is_native: true,
-                  can_place: true,
-                  props: {
-                    style: {
-                      minHeight: 20,
-                      padding: "0px",
-                    }
-                  },
-                  config: {
-                    padding: {
-                      text: "内间距",
-                      type: "4-value"
-                    },
-                    margin: {
-                      text: "外边距",
-                      type: "4-value"
-                    },
-                    backgroundColor: {
-                      text: "背景色",
-                    }
-                  }
-                }]
+                this.state.addListData.childrens = [com_div];
               }
               props.push(this.state.addListData);
               editcom.props[key] = _.cloneDeep(props);
@@ -373,21 +344,43 @@ class Editor extends Component {
    */ 
   update4Value = (s, index, v) => {
     const { value4EditResult, editCom, comNowIndex, activeCom } = this.state;
-    console.log(comNowIndex, activeCom)
     const values = value4EditResult[s];
     values[index] = v.target.value;
     const newEditCom = _.cloneDeep(editCom);
     newEditCom.props.style[s] = values.join(' ');
+    this.renderAfterEdit(newEditCom);
+  }
+
+  /**
+   * 更新data、重新渲染
+   */ 
+  renderAfterEdit = (newEditCom) => {
+    const { data } = this.state;
     this.setState({
       editCom: newEditCom
     }, () => {
-      this.forceUpdate();
-    });                         
+      this.setState({ data: this.updateDom(data) }, () => {
+        this.renderJSON(data);
+      });
+    });
+  }
+
+  updateDom = (doms) => {
+    const { editCom } = this.state;
+    doms.forEach(d => {
+      if (d.id === editCom.id) {
+        d.props = editCom.props;
+      }
+      if (d.childrens) {
+        this.updateDom(d.childrens);
+      }
+    });
+    return doms;
   }
 
   render() {
     const { dependComponents, data, hasBeginEdit, value4EditResult, editCom, activeCom, isDragLayer, layer_isTop, layer_show,
-    layer_w, layer_h, layer_x, layer_y } = this.state;
+    layer_w, layer_h, layer_x, layer_y, previewVisible } = this.state;
     // localStorage.setItem('cache_data', JSON.stringify(this.state.data));
       
     const layerStyle = {
@@ -406,10 +399,10 @@ class Editor extends Component {
           this.state.mouse_x = e.clientX;
           this.state.mouse_y = e.clientY;
 
-          this.state.dragdiv_x = this.state.mouse_x
-          this.state.dragdiv_y = this.state.mouse_y
-          document.getElementById("dragdiv").style.left = this.state.mouse_x - 5 + 'px'
-          document.getElementById("dragdiv").style.top = this.state.mouse_y - 5 + 'px'
+          this.state.dragdiv_x = this.state.mouse_x;
+          this.state.dragdiv_y = this.state.mouse_y;
+          document.getElementById("dragdiv").style.left = this.state.mouse_x - 5 + 'px';
+          document.getElementById("dragdiv").style.top = this.state.mouse_y - 5 + 'px';
           this.state.layer_w = activeCom.props.style.width = this.state.mouse_x + 5 - this.state.layer_x;
           this.state.layer_h = activeCom.props.style.height = this.state.mouse_y + 5 - this.state.layer_y;
           this.forceUpdate()
@@ -431,14 +424,16 @@ class Editor extends Component {
         <div className="side-panel left">
           <Collapse>
             {antComponents.map((group, i) => {
-              return <Panel header={`${group.group_title} (${group.coms.length})`} key={i + 1}>
+              return <Panel header={`${group.group_title} (${group.coms.length})`} key={i}>
                 {group.coms.map((com, i2) => {
                   return <Tag
                     key={i + '' + i2}
                     draggable={true}
                     onDragStart={() => {
-                      this.setState({ hasBeginEdit: true });
-                      this.state.draggingData = com;
+                      this.setState({ 
+                        hasBeginEdit: true,
+                        draggingData: com
+                      });
                     }}
                   >
                     {com.type} {com.title}
@@ -488,9 +483,7 @@ class Editor extends Component {
                               onChange={c => {
                                 const newEditCom = _.cloneDeep(editCom);
                                 newEditCom.props.style[s] = c.color;
-                                this.setState({ editCom: newEditCom }, () => {
-                                  this.forceUpdate();
-                                });
+                                this.renderAfterEdit(newEditCom);
                               }}
                             />
                           </Form.Item>
@@ -510,9 +503,10 @@ class Editor extends Component {
                           </Form.Item>
                         } else {
                           return <Form.Item label={editCom.config[key][s].text} className="mb5">
-                            <Input defaultValue={editCom.props[key][s]} onChange={(v) => {
-                              this.state.editCom.props[key][s] = v.target.value;
-                              this.forceUpdate()
+                            <Input defaultValue={editCom.props[key][s]} onChange={v => {
+                              const newEditCom = _.cloneDeep(editCom);
+                              newEditCom.props[key][s] = v.target.value;
+                              this.renderAfterEdit(newEditCom);
                             }}></Input>
                           </Form.Item>
                         }
@@ -561,15 +555,22 @@ class Editor extends Component {
               </div>
             </Panel>
             
-            <Panel header="最终代码 (自动更新)" key="output">
-              <Button className="mb5" onClick={() => {
-                localStorage.setItem('preview_data', JSON.stringify(data));
-                window.open('#/preview')
-              }} type="primary">生成预览页面</Button>
-              <Input type="textarea" rows={10} value={renderJSONtoJSX(dependComponents, data)}></Input>
+            <Panel className="code-wrap" header="最终代码 (自动更新)" key="output">
+              <CopyOutlined onClick={() => {
+                copy(renderJSONtoJSX(dependComponents, data));
+                message.success('复制成功');
+              }} />
+              <EyeOutlined onClick={() => {
+                this.setState({ previewVisible: true })
+              }} />
+              <SyntaxHighlighter language="javascript" style={docco}>
+                {renderJSONtoJSX(dependComponents, data)}
+              </SyntaxHighlighter>
             </Panel>
           </Collapse>
         </div>
+
+        <PreviewModal visible={previewVisible} data={data} onClose={() => this.setState({ previewVisible: false })}/>
       </div>
     );
   }

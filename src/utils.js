@@ -1,3 +1,17 @@
+import antd from './components/index';
+
+
+export const getComponent = (types) => {
+  if (types.length == 1) {
+    return antd[types[0]];
+  } else {
+    var lastT = types.pop();
+    var com = getComponent(types)[lastT];
+    return com;
+  }
+}
+
+
 export const renderJSONtoJSX = (dependComponents, data) => {
 
   return `import React, { Component } from 'react';
@@ -32,7 +46,6 @@ const renderElementtoJSX = (data) => {
   })
   return result;
 }
-
 
 const renderProps = (props, d) => {
   var result = '';

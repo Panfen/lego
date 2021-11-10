@@ -1,0 +1,11 @@
+.preview-modal {
+	top: 0;
+	padding-bottom: 0;
+	.ant-modal-header {
+		display: none;
+	}
+	.ant-modal-body {
+		padding: 0;
+		height: 100vh;
+	}
+}

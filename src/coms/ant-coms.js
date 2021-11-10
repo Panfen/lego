@@ -77,7 +77,6 @@ export default [
         "coms": [
             Breadcrumb,
             RJMenu,
-
             {
                 type: "Tabs",
                 title: "Tabs",

@@ -59,7 +59,7 @@
 	min-height: 30px;
 	background: #fff;
 	.ant-btn {
-		margin-right: 20px;
+		margin: 0 20px 10px 0;
 	}
 }
 
@@ -68,4 +68,22 @@
 	margin-bottom: 10px;
 	font-weight: bold; 
 	font-size: 20px;
+}
+
+.code-wrap {
+	position: relative;
+	.anticon-copy, .anticon-eye {
+		position: absolute;
+		right: 30px;
+		top: 75px;
+		color: #1890ff;
+		cursor: pointer;
+	}
+	.anticon-copy {
+		right: 55px;
+	}
+}
+
+.anticon-delete {
+	color: #ec7259;
 }
