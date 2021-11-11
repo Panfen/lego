@@ -15,7 +15,7 @@
 
 ### 2. 页面效果
 
-![页面预览](https://static.aistarfish.com/front-release/file/F2021111110132055400001506.page.png)
+![页面预览](https://static.aistarfish.com/front-release/file/F2021111110282204500002136.page.png)
 
 
 
