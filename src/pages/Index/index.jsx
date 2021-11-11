@@ -219,13 +219,13 @@ class Editor extends Component {
   getDomPos(target) {
     var actualLeft = target.offsetLeft;
     var current = target.offsetParent;
-    while (current !== null) {
+    while (current) {
       actualLeft += current.offsetLeft;
       current = current.offsetParent;
     }
     var actualTop = target.offsetTop;
     var current = target.offsetParent;
-    while (current !== null) {
+    while (current) {
       actualTop += current.offsetTop;
       current = current.offsetParent;
     }
