@@ -359,20 +359,34 @@ class Editor extends Component {
     this.setState({
       editCom: newEditCom
     }, () => {
-      this.setState({ data: this.updateDom(data) }, () => {
+      this.setState({ 
+        data: this.updateDom(data, 'editCom')
+      }, () => {
         this.renderJSON(data);
       });
     });
   }
 
-  updateDom = (doms) => {
-    const { editCom } = this.state;
+  /**
+   * 拖动元素，宽高变更后重新渲染
+   */ 
+  renderAfterDrag = () => {
+    const { data } = this.state;
+    this.setState({ 
+      data: this.updateDom(data, 'activeCom'),
+    }, () => {
+      this.renderJSON(data);
+    })
+  }
+
+  updateDom = (doms, type) => {
+    const com = this.state[type];
     doms.forEach(d => {
-      if (d.id === editCom.id) {
-        d.props = editCom.props;
+      if (d.id === com.id) {
+        d.props = com.props;
       }
       if (d.childrens) {
-        this.updateDom(d.childrens);
+        this.updateDom(d.childrens, type);
       }
     });
     return doms;
@@ -396,16 +410,24 @@ class Editor extends Component {
       <div className="editor" onMouseMove={e => {
         if (isDragLayer) {
           e.stopPropagation();
-          this.state.mouse_x = e.clientX;
-          this.state.mouse_y = e.clientY;
+          document.getElementById("dragdiv").style.left = e.clientX - 5 + 'px';
+          document.getElementById("dragdiv").style.top = e.clientY - 5 + 'px';
 
-          this.state.dragdiv_x = this.state.mouse_x;
-          this.state.dragdiv_y = this.state.mouse_y;
-          document.getElementById("dragdiv").style.left = this.state.mouse_x - 5 + 'px';
-          document.getElementById("dragdiv").style.top = this.state.mouse_y - 5 + 'px';
-          this.state.layer_w = activeCom.props.style.width = this.state.mouse_x + 5 - this.state.layer_x;
-          this.state.layer_h = activeCom.props.style.height = this.state.mouse_y + 5 - this.state.layer_y;
-          this.forceUpdate()
+          const newActiveCom = _.cloneDeep(activeCom);
+          newActiveCom.props.style.width = e.clientX + 5 - layer_x;
+          newActiveCom.props.style.height = e.clientY + 5 - layer_y;
+
+          this.setState({
+            mouse_x: e.clientX,
+            mouse_y: e.clientY,
+            dragdiv_x: e.clientX,
+            dragdiv_y: e.clientY,
+            layer_w: e.clientX + 5 - layer_x,
+            layer_h: e.clientY + 5 - layer_y,
+            activeCom: newActiveCom
+          }, () => {
+            this.renderAfterDrag();
+          })
         }
       }} onMouseUp={() => {
         this.setState({ isDragLayer: false });
