@@ -12,7 +12,8 @@
 	height: 10px;
 	background: #aaa;
 	position: absolute;
-	z-index: 100000; 
+	z-index: 100000;
+	cursor: move;
 }
 
 .side-panel {
@@ -87,3 +88,4 @@
 .anticon-delete {
 	color: #ec7259;
 }
+

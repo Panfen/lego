@@ -117,10 +117,8 @@ class Editor extends Component {
         var outerProps = {};
         outerProps.onMouseOver = (e) => {
           e.stopPropagation();
-          e.preventDefault()
-          if (!isDragLayer) {
-            this.showLayer(e.target, d);
-          }
+          e.preventDefault();
+          this.showLayer(e.target, d);
         }
         outerProps.onMouseLeave = (e) => {
           e.stopPropagation();
@@ -200,6 +198,10 @@ class Editor extends Component {
   }
 
   showLayer(target, d) {
+    const { isDragLayer } = this.state;
+    if (isDragLayer) {
+      return;
+    }
     const { x, y } = this.getDomPos(target);
     this.setState({
       activeCom: d,
@@ -235,16 +237,26 @@ class Editor extends Component {
     }
   }
 
-  renderEnumObject(editcom, key) {
-    const { showAddList } = this.state;
-    var props = editcom.props[key];
-    var config = editcom.config[key].enumobject;
+  /**
+   * 编辑属性，设置增加一项的值
+   */  
+  setAddListData = (index, v, type) => {
+    const { addListData,  } = this.state;
+    addListData[index] = ['Number', 'Boolean'].includes(type) ? v : v.target.value + "";
+    this.setState({ addListData });
+  }
+
+  renderEnumObject(key) {
+    const { editCom, showAddList, addListData } = this.state;
+    var props = editCom.props[key];
+    var config = editCom.config[key].enumobject;
     if (config.type == 'relative_props_object') {
-      config = editcom.props[config.target];
+      config = editCom.props[config.target];
     }
     return <div>
-      <div className="enum-title">{editcom.config[key].text}</div>
+      <div className="enum-title">{editCom.config[key].text}</div>
       <Table
+        dataSource={props}
         pagination={false}
         bordered={true}
         size="small"
@@ -255,16 +267,15 @@ class Editor extends Component {
           render: (text, record, index) => {
             return <DeleteOutlined onClick={() => {
               props.splice(index, 1);
-              editcom.props[key] = _.cloneDeep(props);
+              editCom.props[key] = _.cloneDeep(props);
               this.forceUpdate();
             }} />
           }
         }])}
-        dataSource={props}
       />
       <Button className="mt10" onClick={() => {
-        this.state.addListData = {}
         this.setState({
+          addListData: {},
           showAddList: true
         })
       }}>添加一项</Button>
@@ -275,36 +286,28 @@ class Editor extends Component {
               {
                 (() => {
                   if (c.type == 'String')
-                    return <Input placeholder={c.title} onInput={v => {
-                      this.state.addListData[c.dataIndex] = v.target.value + "";
-                    }}></Input>
+                    return <Input placeholder={c.title} onInput={v => this.setAddListData(c.dataIndex, v, c.type)} />
                   if (c.type == 'Number')
-                    return <InputNumber onChange={v => {
-                      this.state.addListData[c.dataIndex] = v;
-                    }}></InputNumber>
+                    return <InputNumber onChange={v => this.setAddListData(c.dataIndex, v, c.type)} />
                   if (c.type == 'Boolean')
-                    return <Checkbox onChange={v => {
-                      this.state.addListData[c.dataIndex] = v;
-                    }}></Checkbox>
+                    return <Checkbox onChange={v => this.setAddListData(c.dataIndex, v, c.type)} />
                   else
-                    return <Input placeholder={c.title} onInput={v => {
-                      this.state.addListData[c.dataIndex] = v.target.value + "";
-                    }}></Input>
+                    return <Input placeholder={c.title} onInput={v => this.setAddListData(c.dataIndex, v, c.type)} />
                 })()
               }
             </Form.Item>
           })}
           <Form.Item label="" className="mb5">
             <Button type="primary" onClick={() => {
-              this.setState({
-                showAddList: false
-              });
-              if (editcom.sub_type == 'table_container') {
-                this.state.addListData.childrens = [com_div];
+              if (editCom.sub_type == 'table_container') {
+                addListData.childrens = [com_div];
               }
-              props.push(this.state.addListData);
-              editcom.props[key] = _.cloneDeep(props);
-              this.state.addListData = {}
+              props.push(addListData);
+              editCom.props[key] = _.cloneDeep(props);
+              this.setState({
+                showAddList: false,
+                addListData: {}
+              });
               this.forceUpdate();
             }}>提交</Button>
           </Form.Item>
@@ -392,6 +395,34 @@ class Editor extends Component {
     return doms;
   }
 
+  /**
+   * 根节点监听鼠标拖动
+   */ 
+  onEditorMouseMove = (e) => {
+    const { isDragLayer, activeCom, layer_x, layer_y } = this.state;
+    if (isDragLayer) {
+      e.stopPropagation();
+      document.getElementById("dragdiv").style.left = e.clientX - 5 + 'px';
+      document.getElementById("dragdiv").style.top = e.clientY - 5 + 'px';
+
+      const newActiveCom = _.cloneDeep(activeCom);
+      newActiveCom.props.style.width = e.clientX + 5 - layer_x;
+      newActiveCom.props.style.height = e.clientY + 5 - layer_y;
+
+      this.setState({
+        mouse_x: e.clientX,
+        mouse_y: e.clientY,
+        dragdiv_x: e.clientX,
+        dragdiv_y: e.clientY,
+        layer_w: e.clientX + 5 - layer_x,
+        layer_h: e.clientY + 5 - layer_y,
+        activeCom: newActiveCom
+      }, () => {
+        this.renderAfterDrag();
+      })
+    }
+  }
+
   render() {
     const { dependComponents, data, hasBeginEdit, value4EditResult, editCom, activeCom, isDragLayer, layer_isTop, layer_show,
     layer_w, layer_h, layer_x, layer_y, previewVisible } = this.state;
@@ -407,31 +438,7 @@ class Editor extends Component {
     }
 
     return (
-      <div className="editor" onMouseMove={e => {
-        if (isDragLayer) {
-          e.stopPropagation();
-          document.getElementById("dragdiv").style.left = e.clientX - 5 + 'px';
-          document.getElementById("dragdiv").style.top = e.clientY - 5 + 'px';
-
-          const newActiveCom = _.cloneDeep(activeCom);
-          newActiveCom.props.style.width = e.clientX + 5 - layer_x;
-          newActiveCom.props.style.height = e.clientY + 5 - layer_y;
-
-          this.setState({
-            mouse_x: e.clientX,
-            mouse_y: e.clientY,
-            dragdiv_x: e.clientX,
-            dragdiv_y: e.clientY,
-            layer_w: e.clientX + 5 - layer_x,
-            layer_h: e.clientY + 5 - layer_y,
-            activeCom: newActiveCom
-          }, () => {
-            this.renderAfterDrag();
-          })
-        }
-      }} onMouseUp={() => {
-        this.setState({ isDragLayer: false });
-      }}>
+      <div className="editor" onMouseMove={this.onEditorMouseMove.bind(this)} onMouseUp={() => this.setState({ isDragLayer: false })}>
         <div className="edit_layer" style={layerStyle}>
           <div color="#f50">{activeCom.title}</div>
         </div>
@@ -444,7 +451,7 @@ class Editor extends Component {
 
         {/* 左侧组件选择区*/}
         <div className="side-panel left">
-          <Collapse>
+          <Collapse defaultActiveKey={[3]}>
             {antComponents.map((group, i) => {
               return <Panel header={`${group.group_title} (${group.coms.length})`} key={i}>
                 {group.coms.map((com, i2) => {
@@ -534,7 +541,7 @@ class Editor extends Component {
                         }
                       })
                     } else if (editCom.config[key].enumobject) {
-                      return this.renderEnumObject(editCom, key);
+                      return this.renderEnumObject(key);
                     } else {
                       return <Form.Item label={editCom.config[key].text} className="mb5">
                         {
