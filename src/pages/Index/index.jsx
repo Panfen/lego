@@ -337,8 +337,9 @@ class Editor extends Component {
     var id = com.id;
     var { com, parent } = this.findIdFromComs(id, data);
     var cloneCom = _.cloneDeep(com);
-    cloneCom.id = comNowIndex++;
-    parent.childrens.push(cloneCom)
+    cloneCom.id = (comNowIndex + 1);
+    parent.childrens.push(cloneCom);
+    this.setState({ comNowIndex: comNowIndex + 1 });
     this.forceUpdate();
   }
 
@@ -489,11 +490,7 @@ class Editor extends Component {
                     this.forceUpdate();
                   }}>删除此元素</Button>
                 }
-                {editCom.type && <Button onClick={() => {
-                    this.copyCom(editCom);
-                    this.forceUpdate();
-                  }}>复制此元素</Button>
-                }
+                {editCom.type && <Button onClick={() => this.copyCom(editCom)}>复制此元素</Button>}
                 <Button onClick={() => {
                   // localStorage.setItem('cache_data', '');
                   window.location.reload();
